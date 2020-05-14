@@ -1,21 +1,3 @@
-// Helper program to generate a new secret for use in two-factor
-// authentication.
-//
-// Copyright 2010 Google Inc.
-// Author: Markus Gutschke
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include "config.h"
 
 #include <assert.h>
@@ -39,11 +21,11 @@
 #define SECRET "/.google_authenticator"
 #define SECRET_BITS 128                         // Must be divisible by eight
 #define VERIFICATION_CODE_MODULUS (1000 * 1000) // Six digits
-#define SCRATCHCODES 5          // Default number of initial scratchcodes
-#define MAX_SCRATCHCODES 10     // Max number of initial scratchcodes
-#define SCRATCHCODE_LENGTH 8    // Eight digits per scratchcode
-#define BYTES_PER_SCRATCHCODE 4 // 32bit of randomness is enough
-#define BITS_PER_BASE32_CHAR 5  // Base32 expands space by 8/5
+#define SCRATCHCODES 5                          // Default number of initial scratchcodes
+#define MAX_SCRATCHCODES 10                     // Max number of initial scratchcodes
+#define SCRATCHCODE_LENGTH 8                    // Eight digits per scratchcode
+#define BYTES_PER_SCRATCHCODE 4                 // 32bit of randomness is enough
+#define BITS_PER_BASE32_CHAR 5                  // Base32 expands space by 8/5
 
 static enum { QR_UNSET = 0, QR_NONE, QR_ANSI, QR_UTF8 } qr_mode = QR_UNSET;
 
@@ -67,8 +49,7 @@ static int generateCode(const char *key, unsigned long tm) {
     // Decode secret from Base32 to a binary representation, and check that we
     // have at least one byte's worth of secret data.
     uint8_t secret[100];
-    if ((secretLen = base32_decode((const uint8_t *)key, secret, secretLen)) <
-        1) {
+    if ((secretLen = base32_decode((const uint8_t *)key, secret, secretLen)) < 1) {
         return -1;
     }
 
@@ -157,16 +138,12 @@ static const char *urlEncode(const char *s) {
     return ret;
 }
 
-static const char *getURL(const char *secret, const char *label,
-                          char **encoderURL, const int use_totp,
-                          const char *issuer) {
+static const char *getURL(const char *secret, const char *label, char **encoderURL, const int use_totp, const char *issuer) {
     const char *encodedLabel = urlEncode(label);
     char *url;
     const char totp = use_totp ? 't' : 'h';
-    if (asprintf(&url, "otpauth://%cotp/%s?secret=%s", totp, encodedLabel,
-                 secret) < 0) {
-        fprintf(stderr,
-                "String allocation failed, probably running out of memory.\n");
+    if (asprintf(&url, "otpauth://%cotp/%s?secret=%s", totp, encodedLabel, secret) < 0) {
+        fprintf(stderr, "String allocation failed, probably running out of memory.\n");
         _exit(1);
     }
 
@@ -175,9 +152,7 @@ static const char *getURL(const char *secret, const char *label,
         const char *encodedIssuer = urlEncode(issuer);
         char *newUrl;
         if (asprintf(&newUrl, "%s&issuer=%s", url, encodedIssuer) < 0) {
-            fprintf(
-                stderr,
-                "String allocation failed, probably running out of memory.\n");
+            fprintf(stderr, "String allocation failed, probably running out of memory.\n");
             _exit(1);
         }
         free((void *)encodedIssuer);
@@ -191,9 +166,7 @@ static const char *getURL(const char *secret, const char *label,
                               "chld=M|0&cht=qr&chl=";
         const char *encodedURL = urlEncode(url);
 
-        *encoderURL = strcat(
-            strcpy(malloc(strlen(encoder) + strlen(encodedURL) + 1), encoder),
-            encodedURL);
+        *encoderURL = strcat(strcpy(malloc(strlen(encoder) + strlen(encodedURL) + 1), encoder), encodedURL);
         free((void *)encodedURL);
     }
     free((void *)encodedLabel);
@@ -231,11 +204,8 @@ static int displayQRCode(const char *url) {
         int width;
         unsigned char *data;
     } QRcode;
-    QRcode *(*QRcode_encodeString8bit)(const char *, int, int) =
-        (QRcode * (*)(const char *, int, int))
-            dlsym(qrencode, "QRcode_encodeString8bit");
-    void (*QRcode_free)(QRcode * qrcode) =
-        (void (*)(QRcode *))dlsym(qrencode, "QRcode_free");
+    QRcode *(*QRcode_encodeString8bit)(const char *, int, int) = (QRcode * (*)(const char *, int, int)) dlsym(qrencode, "QRcode_encodeString8bit");
+    void (*QRcode_free)(QRcode * qrcode) = (void (*)(QRcode *))dlsym(qrencode, "QRcode_free");
     if (!QRcode_encodeString8bit || !QRcode_free) {
         dlclose(qrencode);
         return 0;
@@ -329,17 +299,15 @@ static int displayQRCode(const char *url) {
 }
 
 // Display to the user what they need to provision their app.
-static void displayEnrollInfo(const char *secret, const char *label,
-                              const int use_totp, const char *issuer) {
+static void displayEnrollInfo(const char *secret, const char *label, const int use_totp, const char *issuer) {
     if (qr_mode == QR_NONE) {
         return;
     }
     char *encoderURL;
     const char *url = getURL(secret, label, &encoderURL, use_totp, issuer);
-    printf(
-        "Warning: pasting the following URL into your browser exposes the OTP "
-        "secret to Google:\n  %s\n",
-        encoderURL);
+    printf("Warning: pasting the following URL into your browser exposes the OTP "
+           "secret to Google:\n  %s\n",
+           encoderURL);
 
     // Only newer systems have support for libqrencode. So instead of requiring
     // it at build-time we look for it at run-time. If it cannot be found, the
@@ -410,14 +378,12 @@ static char *addOption(char *buf, size_t nbuf, const char *option) {
     char *scratchCodes = strchr(buf, '\n');
     assert(scratchCodes);
     scratchCodes++;
-    memmove(scratchCodes + strlen(option), scratchCodes,
-            strlen(scratchCodes) + 1);
+    memmove(scratchCodes + strlen(option), scratchCodes, strlen(scratchCodes) + 1);
     memcpy(scratchCodes, option, strlen(option));
     return buf;
 }
 
-static char *maybeAddOption(const char *msg, char *buf, size_t nbuf,
-                            const char *option) {
+static char *maybeAddOption(const char *msg, char *buf, size_t nbuf, const char *option) {
     if (maybe(msg)) {
         buf = addOption(buf, nbuf, option);
     }
@@ -428,43 +394,42 @@ static void print_version() { puts("google-authenticator " VERSION); }
 
 static void usage(void) {
     print_version();
-    puts(
-        "google-authenticator [<options>]\n"
-        " -h, --help                     Print this message\n"
-        "     --version                  Print version\n"
-        " -c, --counter-based            Set up counter-based (HOTP) "
-        "verification\n"
-        " -C, --no-confirm               Don't confirm code. For "
-        "non-interactive "
-        "setups\n"
-        " -t, --time-based               Set up time-based (TOTP) "
-        "verification\n"
-        " -d, --disallow-reuse           Disallow reuse of previously used "
-        "TOTP "
-        "tokens\n"
-        " -D, --allow-reuse              Allow reuse of previously used TOTP "
-        "tokens\n"
-        " -f, --force                    Write file without first confirming "
-        "with user\n"
-        " -l, --label=<label>            Override the default label in "
-        "\"otpauth://\" URL\n"
-        " -i, --issuer=<issuer>          Override the default issuer in "
-        "\"otpauth://\" URL\n"
-        " -q, --quiet                    Quiet mode\n"
-        " -Q, --qr-mode={NONE,ANSI,UTF8} QRCode output mode\n"
-        " -r, --rate-limit=N             Limit logins to N per every M "
-        "seconds\n"
-        " -R, --rate-time=M              Limit logins to N per every M "
-        "seconds\n"
-        " -u, --no-rate-limit            Disable rate-limiting\n"
-        " -s, --secret=<file>            Specify a non-standard file location\n"
-        " -S, --step-size=S              Set interval between token refreshes\n"
-        " -w, --window-size=W            Set window of concurrently valid "
-        "codes\n"
-        " -W, --minimal-window           Disable window of concurrently valid "
-        "codes\n"
-        " -e, --emergency-codes=N        Number of emergency codes to "
-        "generate");
+    puts("google-authenticator [<options>]\n"
+         " -h, --help                     Print this message\n"
+         "     --version                  Print version\n"
+         " -c, --counter-based            Set up counter-based (HOTP) "
+         "verification\n"
+         " -C, --no-confirm               Don't confirm code. For "
+         "non-interactive "
+         "setups\n"
+         " -t, --time-based               Set up time-based (TOTP) "
+         "verification\n"
+         " -d, --disallow-reuse           Disallow reuse of previously used "
+         "TOTP "
+         "tokens\n"
+         " -D, --allow-reuse              Allow reuse of previously used TOTP "
+         "tokens\n"
+         " -f, --force                    Write file without first confirming "
+         "with user\n"
+         " -l, --label=<label>            Override the default label in "
+         "\"otpauth://\" URL\n"
+         " -i, --issuer=<issuer>          Override the default issuer in "
+         "\"otpauth://\" URL\n"
+         " -q, --quiet                    Quiet mode\n"
+         " -Q, --qr-mode={NONE,ANSI,UTF8} QRCode output mode\n"
+         " -r, --rate-limit=N             Limit logins to N per every M "
+         "seconds\n"
+         " -R, --rate-time=M              Limit logins to N per every M "
+         "seconds\n"
+         " -u, --no-rate-limit            Disable rate-limiting\n"
+         " -s, --secret=<file>            Specify a non-standard file location\n"
+         " -S, --step-size=S              Set interval between token refreshes\n"
+         " -w, --window-size=W            Set window of concurrently valid "
+         "codes\n"
+         " -W, --minimal-window           Disable window of concurrently valid "
+         "codes\n"
+         " -e, --emergency-codes=N        Number of emergency codes to "
+         "generate");
 }
 
 int main(int argc, char *argv[]) {
@@ -475,14 +440,10 @@ int main(int argc, char *argv[]) {
     static const char step[] = "\" STEP_SIZE 30\n";
     static const char window[] = "\" WINDOW_SIZE 17\n";
     static const char ratelimit[] = "\" RATE_LIMIT 3 30\n";
-    char
-        secret[(SECRET_BITS + BITS_PER_BASE32_CHAR - 1) / BITS_PER_BASE32_CHAR +
-               1 /* newline */ +
-               sizeof(hotp) + // hotp and totp are mutually exclusive.
-               sizeof(disallow) + sizeof(step) + sizeof(window) +
-               sizeof(ratelimit) + 5 + // NN MMM (total of five digits)
-               SCRATCHCODE_LENGTH * (MAX_SCRATCHCODES + 1 /* newline */) +
-               1 /* NUL termination character */];
+    char secret[(SECRET_BITS + BITS_PER_BASE32_CHAR - 1) / BITS_PER_BASE32_CHAR + 1 /* newline */ +
+                sizeof(hotp) +                                                             // hotp and totp are mutually exclusive.
+                sizeof(disallow) + sizeof(step) + sizeof(window) + sizeof(ratelimit) + 5 + // NN MMM (total of five digits)
+                SCRATCHCODE_LENGTH * (MAX_SCRATCHCODES + 1 /* newline */) + 1 /* NUL termination character */];
 
     enum { ASK_MODE, HOTP_MODE, TOTP_MODE } mode = ASK_MODE;
     enum { ASK_REUSE, DISALLOW_REUSE, ALLOW_REUSE } reuse = ASK_REUSE;
@@ -496,29 +457,18 @@ int main(int argc, char *argv[]) {
     int window_size = 0;
     int emergency_codes = -1;
     int idx;
+    int fd = -1;
+    mode = TOTP_MODE;
+    reuse = ALLOW_REUSE;
     for (;;) {
         static const char optstring[] = "+hcCtdDfl:i:qQ:r:R:us:S:w:We:";
-        static struct option options[] = {{"help", 0, 0, 'h'},
-                                          {"version", 0, 0, 0},
-                                          {"counter-based", 0, 0, 'c'},
-                                          {"no-confirm", 0, 0, 'C'},
-                                          {"time-based", 0, 0, 't'},
-                                          {"disallow-reuse", 0, 0, 'd'},
-                                          {"allow-reuse", 0, 0, 'D'},
-                                          {"force", 0, 0, 'f'},
-                                          {"label", 1, 0, 'l'},
-                                          {"issuer", 1, 0, 'i'},
-                                          {"quiet", 0, 0, 'q'},
-                                          {"qr-mode", 1, 0, 'Q'},
-                                          {"rate-limit", 1, 0, 'r'},
-                                          {"rate-time", 1, 0, 'R'},
-                                          {"no-rate-limit", 0, 0, 'u'},
-                                          {"secret", 1, 0, 's'},
-                                          {"step-size", 1, 0, 'S'},
-                                          {"window-size", 1, 0, 'w'},
-                                          {"minimal-window", 0, 0, 'W'},
-                                          {"emergency-codes", 1, 0, 'e'},
-                                          {0, 0, 0, 0}};
+        static struct option options[] = {{"help", 0, 0, 'h'},           {"version", 0, 0, 0},           {"counter-based", 0, 0, 'c'},
+                                          {"no-confirm", 0, 0, 'C'},     {"time-based", 0, 0, 't'},      {"disallow-reuse", 0, 0, 'd'},
+                                          {"allow-reuse", 0, 0, 'D'},    {"force", 0, 0, 'f'},           {"label", 1, 0, 'l'},
+                                          {"issuer", 1, 0, 'i'},         {"quiet", 0, 0, 'q'},           {"qr-mode", 1, 0, 'Q'},
+                                          {"rate-limit", 1, 0, 'r'},     {"rate-time", 1, 0, 'R'},       {"no-rate-limit", 0, 0, 'u'},
+                                          {"secret", 1, 0, 's'},         {"step-size", 1, 0, 'S'},       {"window-size", 1, 0, 'w'},
+                                          {"minimal-window", 0, 0, 'W'}, {"emergency-codes", 1, 0, 'e'}, {0, 0, 0, 0}};
         idx = -1;
         const int c = getopt_long(argc, argv, optstring, options, &idx);
         if (c > 0) {
@@ -661,8 +611,7 @@ int main(int argc, char *argv[]) {
             errno = 0;
             const long l = strtol(optarg, &endptr, 10);
             if (errno || endptr == optarg || *endptr || l < 15 || l > 600) {
-                fprintf(stderr,
-                        "-R requires an argument in the range 15..600\n");
+                fprintf(stderr, "-R requires an argument in the range 15..600\n");
                 _exit(1);
             }
             r_time = (int)l;
@@ -736,10 +685,8 @@ int main(int argc, char *argv[]) {
             char *endptr;
             errno = 0;
             long l = strtol(optarg, &endptr, 10);
-            if (errno || endptr == optarg || *endptr || l < 0 ||
-                l > MAX_SCRATCHCODES) {
-                fprintf(stderr, "-e requires an argument in the range 0..%d\n",
-                        MAX_SCRATCHCODES);
+            if (errno || endptr == optarg || *endptr || l < 0 || l > MAX_SCRATCHCODES) {
+                fprintf(stderr, "-e requires an argument in the range 0..%d\n", MAX_SCRATCHCODES);
                 _exit(1);
             }
             emergency_codes = (int)l;
@@ -770,10 +717,7 @@ int main(int argc, char *argv[]) {
         if (gethostname(hostname, sizeof(hostname) - 1)) {
             strcpy(hostname, "unix");
         }
-        label = strcat(
-            strcat(strcpy(malloc(strlen(user) + strlen(hostname) + 2), user),
-                   "@"),
-            hostname);
+        label = strcat(strcat(strcpy(malloc(strlen(user) + strlen(hostname) + 2), user), "@"), hostname);
         free((char *)user);
     }
     if (!issuer) {
@@ -800,26 +744,22 @@ int main(int argc, char *argv[]) {
         // Confirm code.
         if (confirm && use_totp) {
             for (;;) {
-                const int test_code =
-                    ask_code("Enter code from app (-1 to skip):");
+                const int test_code = ask_code("Enter code from app (-1 to skip):");
                 if (test_code < 0) {
                     printf("Code confirmation skipped\n");
                     break;
                 }
-                const unsigned long tm =
-                    time(NULL) / (step_size ? step_size : 30);
+                const unsigned long tm = time(NULL) / (step_size ? step_size : 30);
                 const int correct_code = generateCode(secret, tm);
                 if (test_code == correct_code) {
                     printf("Code confirmed\n");
                     break;
                 }
-                printf("Code incorrect (correct code %06d). Try again.\n",
-                       correct_code);
+                printf("Code incorrect (correct code %06d). Try again.\n", correct_code);
             }
         } else {
             const unsigned long tm = 1;
-            printf("Your verification code for code %lu is %06d\n", tm,
-                   generateCode(secret, tm));
+            printf("Your verification code for code %lu is %06d\n", tm, generateCode(secret, tm));
         }
         printf("Your emergency scratch codes are:\n");
     }
@@ -835,8 +775,7 @@ int main(int argc, char *argv[]) {
     new_scratch_code:;
         int scratch = 0;
         for (int j = 0; j < BYTES_PER_SCRATCHCODE; ++j) {
-            scratch = 256 * scratch +
-                      buf[SECRET_BITS / 8 + BYTES_PER_SCRATCHCODE * i + j];
+            scratch = 256 * scratch + buf[SECRET_BITS / 8 + BYTES_PER_SCRATCHCODE * i + j];
         }
         int modulus = 1;
         for (int j = 0; j < SCRATCHCODE_LENGTH; j++) {
@@ -847,17 +786,15 @@ int main(int argc, char *argv[]) {
             // Make sure that scratch codes are always exactly eight digits. If
             // they start with a sequence of zeros, just generate a new scratch
             // code.
-            if (read(fd, buf + (SECRET_BITS / 8 + BYTES_PER_SCRATCHCODE * i),
-                     BYTES_PER_SCRATCHCODE) != BYTES_PER_SCRATCHCODE) {
-                goto urandom_failure;
+            if (read(fd, buf + (SECRET_BITS / 8 + BYTES_PER_SCRATCHCODE * i), BYTES_PER_SCRATCHCODE) != BYTES_PER_SCRATCHCODE) {
+                return 1;
             }
             goto new_scratch_code;
         }
         if (!quiet) {
             printf("  %08d\n", scratch);
         }
-        snprintf(strrchr(secret, '\000'), sizeof(secret) - strlen(secret),
-                 "%08d\n", scratch);
+        snprintf(strrchr(secret, '\000'), sizeof(secret) - strlen(secret), "%08d\n", scratch);
     }
     close(fd);
     if (!secret_fn) {
@@ -875,8 +812,7 @@ int main(int argc, char *argv[]) {
     }
     if (!force) {
         char s[1024];
-        snprintf(s, sizeof s, "Do you want me to update your \"%s\" file?",
-                 secret_fn);
+        snprintf(s, sizeof s, "Do you want me to update your \"%s\" file?", secret_fn);
         if (!maybe(s)) {
             exit(0);
         }
@@ -893,12 +829,11 @@ int main(int argc, char *argv[]) {
     // Add optional flags.
     if (use_totp) {
         if (reuse == ASK_REUSE) {
-            maybeAddOption(
-                "Do you want to disallow multiple uses of the same "
-                "authentication\ntoken? This restricts you to one login "
-                "about every 30s, but it increases\nyour chances to "
-                "notice or even prevent man-in-the-middle attacks",
-                secret, sizeof(secret), disallow);
+            maybeAddOption("Do you want to disallow multiple uses of the same "
+                           "authentication\ntoken? This restricts you to one login "
+                           "about every 30s, but it increases\nyour chances to "
+                           "notice or even prevent man-in-the-middle attacks",
+                           secret, sizeof(secret), disallow);
         } else if (reuse == DISALLOW_REUSE) {
             addOption(secret, sizeof(secret), disallow);
         }
@@ -908,56 +843,51 @@ int main(int argc, char *argv[]) {
             addOption(secret, sizeof(secret), s);
         }
         if (!window_size) {
-            maybeAddOption(
-                "By default, a new token is generated every 30 seconds by"
-                " the mobile app.\nIn order to compensate for possible"
-                " time-skew between the client and the server,\nwe allow"
-                " an extra token before and after the current time. This"
-                " allows for a\ntime skew of up to 30 seconds between"
-                " authentication server and client. If you\nexperience"
-                " problems with poor time synchronization, you can"
-                " increase the window\nfrom its default size of 3"
-                " permitted codes (one previous code, the current\ncode,"
-                " the next code) to 17 permitted codes (the 8 previous"
-                " codes, the current\ncode, and the 8 next codes)."
-                " This will permit for a time skew of up to 4 minutes"
-                "\nbetween client and server."
-                "\nDo you want to do so?",
-                secret, sizeof(secret), window);
+            maybeAddOption("By default, a new token is generated every 30 seconds by"
+                           " the mobile app.\nIn order to compensate for possible"
+                           " time-skew between the client and the server,\nwe allow"
+                           " an extra token before and after the current time. This"
+                           " allows for a\ntime skew of up to 30 seconds between"
+                           " authentication server and client. If you\nexperience"
+                           " problems with poor time synchronization, you can"
+                           " increase the window\nfrom its default size of 3"
+                           " permitted codes (one previous code, the current\ncode,"
+                           " the next code) to 17 permitted codes (the 8 previous"
+                           " codes, the current\ncode, and the 8 next codes)."
+                           " This will permit for a time skew of up to 4 minutes"
+                           "\nbetween client and server."
+                           "\nDo you want to do so?",
+                           secret, sizeof(secret), window);
         } else {
             char s[80];
             // TODO: Should 3 really be the minimal window size for TOTP?
             // If so, the code should not allow -w=1 here.
-            snprintf(s, sizeof s, "\" WINDOW_SIZE %d\n",
-                     window_size > 0 ? window_size : 3);
+            snprintf(s, sizeof s, "\" WINDOW_SIZE %d\n", window_size > 0 ? window_size : 3);
             addOption(secret, sizeof(secret), s);
         }
     } else {
         // Counter based.
         if (!window_size) {
-            maybeAddOption(
-                "By default, three tokens are valid at any one time.  "
-                "This accounts for\ngenerated-but-not-used tokens and "
-                "failed login attempts. In order to\ndecrease the "
-                "likelihood of synchronization problems, this window "
-                "can be\nincreased from its default size of 3 to 17. Do "
-                "you want to do so?",
-                secret, sizeof(secret), window);
+            maybeAddOption("By default, three tokens are valid at any one time.  "
+                           "This accounts for\ngenerated-but-not-used tokens and "
+                           "failed login attempts. In order to\ndecrease the "
+                           "likelihood of synchronization problems, this window "
+                           "can be\nincreased from its default size of 3 to 17. Do "
+                           "you want to do so?",
+                           secret, sizeof(secret), window);
         } else {
             char s[80];
-            snprintf(s, sizeof s, "\" WINDOW_SIZE %d\n",
-                     window_size > 0 ? window_size : 1);
+            snprintf(s, sizeof s, "\" WINDOW_SIZE %d\n", window_size > 0 ? window_size : 1);
             addOption(secret, sizeof(secret), s);
         }
     }
     if (!r_limit && !r_time) {
-        maybeAddOption(
-            "If the computer that you are logging into isn't hardened "
-            "against brute-force\nlogin attempts, you can enable "
-            "rate-limiting for the authentication module.\nBy default, "
-            "this limits attackers to no more than 3 login attempts "
-            "every 30s.\nDo you want to enable rate-limiting?",
-            secret, sizeof(secret), ratelimit);
+        maybeAddOption("If the computer that you are logging into isn't hardened "
+                       "against brute-force\nlogin attempts, you can enable "
+                       "rate-limiting for the authentication module.\nBy default, "
+                       "this limits attackers to no more than 3 login attempts "
+                       "every 30s.\nDo you want to enable rate-limiting?",
+                       secret, sizeof(secret), ratelimit);
     } else if (r_limit > 0 && r_time > 0) {
         char s[80];
         snprintf(s, sizeof s, "\" RATE_LIMIT %d %d\n", r_limit, r_time);
@@ -966,12 +896,10 @@ int main(int argc, char *argv[]) {
 
     fd = open(tmp_fn, O_WRONLY | O_EXCL | O_CREAT | O_NOFOLLOW | O_TRUNC, 0400);
     if (fd < 0) {
-        fprintf(stderr, "Failed to create \"%s\" (%s)", secret_fn,
-                strerror(errno));
+        fprintf(stderr, "Failed to create \"%s\" (%s)", secret_fn, strerror(errno));
         goto errout;
     }
-    if (write(fd, secret, strlen(secret)) != (ssize_t)strlen(secret) ||
-        rename(tmp_fn, secret_fn)) {
+    if (write(fd, secret, strlen(secret)) != (ssize_t)strlen(secret) || rename(tmp_fn, secret_fn)) {
         perror("Failed to write new secret");
         unlink(secret_fn);
         goto errout;
@@ -991,9 +919,3 @@ errout:
     free(tmp_fn);
     return 1;
 }
-/* ---- Emacs Variables ----
- * Local Variables:
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * End:
- */
