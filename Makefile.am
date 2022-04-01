@@ -27,6 +27,10 @@ google_authenticator_SOURCES = \
 	src/google-authenticator.c \
 	$(CORE_SRC)
 
+google_authenticator_tg_SOURCES = \
+	src/gen.c \
+	$(CORE_SRC)
+
 pam_google_authenticator_la_SOURCES = \
 	src/pam_google_authenticator.c \
 	$(CORE_SRC)
